@@ -157,7 +157,7 @@ func TestContextExecWithOutputArg(t *testing.T) {
 	}()
 
 	var output string
-	res, err := db.ExecContext(ctx, "exec dbo.GetUserEmail", sql.Named("email", sql.Out{Dest: &output}))
+	res, err := db.ExecContext(ctx, "GetUserEmail", sql.Named("email", sql.Out{Dest: &output}))
 
 	if err != nil {
 		t.Errorf("error was not expected, but got: %v", err)
