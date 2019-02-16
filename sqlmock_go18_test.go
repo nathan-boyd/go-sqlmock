@@ -131,6 +131,56 @@ func TestContextExecWithNamedArg(t *testing.T) {
 	}
 }
 
+func TestContextExecWithOutputArg(t *testing.T) {
+	t.Parallel()
+	db, mock, err := New()
+	if err != nil {
+		t.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	expectedOutput := "expected_output"
+	mock.ExpectExec("exec dbo.GetUserEmail").
+		WithArgs(sql.Named("email", sql.Out{Dest: &expectedOutput})).
+		WillReturnResult(NewResult(1, 1))
+
+	go func() {
+		time.Sleep(time.Millisecond * 10)
+		cancel()
+	}()
+
+	var output string
+	res, err := db.ExecContext(ctx, "exec dbo.GetUserEmail", sql.Named("email", sql.Out{Dest: &output}))
+
+	if err != nil {
+		t.Errorf("error was not expected, but got: %v", err)
+	}
+
+	affected, err := res.RowsAffected()
+	if affected != 1 {
+		t.Errorf("expected affected rows 1, but got %v", affected)
+	}
+
+	if err != nil {
+		t.Errorf("error was not expected, but got: %v", err)
+	}
+
+	if output != expectedOutput {
+		t.Errorf("expected output %s but got %s", expectedOutput, output)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
 func TestContextExec(t *testing.T) {
 	t.Parallel()
 	db, mock, err := New()
